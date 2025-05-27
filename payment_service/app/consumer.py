@@ -1,5 +1,7 @@
 import os
 import aio_pika
+import json
+import ast
 
 
 async def consume():
@@ -8,10 +10,25 @@ async def consume():
     connection = await aio_pika.connect_robust(rabbitmq_url)
     channel = await connection.channel()
 
-    queue = await channel.declare_queue("order_events", durable=True)
+    order_queue = await channel.declare_queue("order_events", durable=True)
 
-    async with queue.iterator() as queue_iter:
-        print("[*] Waiting for messages in payment_service. To exit press CTRL+C")
+    print("[*] Payment service is listening for order events...")
+
+    async with order_queue.iterator() as queue_iter:
         async for message in queue_iter:
             async with message.process():
-                print(f"[x] Received message in payment_service: {message.body.decode()}")
+                message_body = message.body.decode()
+                try:
+                    order = json.loads(message_body)
+                except json.JSONDecodeError:
+                    order = ast.literal_eval(message_body)
+
+                print(f"[Payment] Processing payment for order: {order}")
+
+                await channel.default_exchange.publish(
+                    aio_pika.Message(body=json.dumps({
+                        "status": "paid",
+                        "order_id": order["order_id"]
+                    }).encode()),
+                    routing_key="payment_events"
+                )

@@ -51,4 +51,12 @@ services:
     environment:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
+  notification_service:
+    build: ./notification_service
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+
 

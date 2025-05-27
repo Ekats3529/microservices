@@ -21,7 +21,7 @@ async def create_order(order: Order):
         add_order(order.order_id, order.item)
 
         event = {'type': 'order_created', 'order_id': order.order_id, 'item': order.item}
-        asyncio.create_task(publish_event(event))
+        await asyncio.create_task(publish_event(event))
 
         return {
             'status': 'order created',
