@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn
 import asyncio
+import threading
 
-from database import init_db, add_order, get_order_by_id, publish_event
+from database import init_db, add_order, get_order_by_id, publish_event, outbox_worker
 from models import Order
 
 app = FastAPI()
@@ -11,8 +12,8 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    # If you need the outbox worker:
-    # threading.Thread(target=outbox_worker, daemon=True).start()
+    loop = asyncio.get_event_loop()
+    loop.create_task(outbox_worker())
 
 
 @app.post('/orders')
@@ -48,5 +49,4 @@ def health_check():
 
 
 if __name__ == '__main__':
-    # threading.Thread(target=outbox_worker, daemon=True).start()
     uvicorn.run("main:app", host="0.0.0.0", port=8000)
