@@ -1,5 +1,8 @@
 import psycopg2
 import psycopg2.extras
+import asyncio
+import aio_pika
+import os
 
 conn = psycopg2.connect(
     database="orders",
@@ -47,3 +50,14 @@ def get_order_by_id(order_id):
     if not order:
         return None
     return dict(order)
+
+
+async def publish_event(event: dict):
+    rabbitmq_url = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost/")
+    connection = await aio_pika.connect_robust(rabbitmq_url)
+    channel = await connection.channel()
+    await channel.default_exchange.publish(
+        aio_pika.Message(body=str(event).encode()),
+        routing_key="order_events"
+    )
+    await connection.close()

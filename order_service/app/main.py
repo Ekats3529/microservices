@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn
+import asyncio
 
-from database import init_db, add_order, get_order_by_id
+from database import init_db, add_order, get_order_by_id, publish_event
 from models import Order
 
 app = FastAPI()
@@ -18,6 +19,9 @@ async def startup_event():
 async def create_order(order: Order):
     try:
         add_order(order.order_id, order.item)
+
+        event = {'type': 'order_created', 'order_id': order.order_id, 'item': order.item}
+        asyncio.create_task(publish_event(event))
 
         return {
             'status': 'order created',
